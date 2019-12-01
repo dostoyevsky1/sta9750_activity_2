@@ -1,0 +1,155 @@
+---
+title: "STA9750 Activity 2"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r echo=FALSE, include = FALSE}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(gridExtra)
+library(GGally)
+
+```
+
+## 1.1
+```{r echo = TRUE}
+salary = read.csv('http://vicpena.github.io/sta9750/salary.csv')
+salary$Education = factor(salary$Education, levels = c('Low','Medium','High'))
+
+p1 = salary %>% ggplot(aes(x=Salary,y=Anxiety)) + 
+  geom_point(aes(x=Salary, y=Anxiety,color=Education)) + geom_smooth(method='lm') +
+  facet_grid(~Education)
+
+p2 =salary %>% ggplot(aes(x=Salary,y=Anxiety)) + geom_point(aes(color=Education)) + 
+  geom_smooth(method='lm')
+p3 = salary %>% ggplot(aes(x=Education,y=Anxiety)) + geom_point(aes(color=Salary)) + 
+  geom_smooth(aes(x=as.numeric(Education),y=Anxiety),method='lm')
+p4 = salary %>% ggplot(aes(x=Education,y=Salary)) + geom_point(aes(color=Anxiety)) + 
+  geom_smooth(aes(x=as.numeric(Education),y=Salary),method='lm')
+
+grid.arrange(p2,p1,p3,p4)
+
+```
+
+## 1.2
+#### While the article claims that higher salaries come at a cost of higher anxiety levels that is not entirely true. As we see from above plot while anxiety does seem to have a positive linear relationship with salary overall, when broken down into groups based on education level, salary seems to have a negative linear relationship with anxiety, and a stronger one at that. In other words, within each education group as salaries rise, anxiety actually goes down. Furthermore, as we see from the latter two plots and from the overall position of color coded data clouds based on education, education has a positive linear relationship with both anxiety levels and salary levels. As such, I would argue that education is the true underlying driver of anxiety which also allows people to occupy the higher salary range in the first place.
+
+
+## 2.1 
+#### We see from the correlations in the upper triangle of the scatterplot matrix that Service and Food have the strongest correlation followed closely by Decor and Price. The weakest relationship is seemingly between Decor and Food.
+
+```{r echo = TRUE}
+nyc = read.csv('http://vicpena.github.io/sta9750/spring19/nyc.csv')
+ggpairs(nyc[,3:7])
+```
+
+## 2.2
+#### As previously mentiond the highest correlations are between Service and Food and Decor and Price pairs.
+
+```{r echo=TRUE}
+ggcorr(nyc[,3:6])
+```
+
+## 2.3
+#### Assuming that cheap and expensive are defined by being below the 1st quartile and above the 3rd quartile respectively in terms of Price. Further assuming that good and bad food is defined by being above and below average respectively in terms of Food variable. As such, good cheap food is found at the following places:
+
+```{r echo=TRUE}
+nyc %>% filter(Price < quantile(Price)[2], Food > mean(Food)) 
+```
+
+#### And the following places are expensive but their food doesn't measure up:
+
+```{r echo=TRUE}
+nyc %>% filter(Price > quantile(Price)[4], Food < mean(Food))
+```
+
+## 2.4
+#### I'd go where the best food is for my money and that would be Gennaro at Price 34 and Food 24. If the reasoning here is not apparent, why would you eat bad food even if there is good service and nice decor?
+
+```{r echo = TRUE}
+nyc %>% filter(Price<=40) %>% arrange(desc(Food)) %>% head(1)
+```
+
+## 2.5
+
+```{r echo = TRUE}
+
+p1 = nyc %>% ggplot(aes(x=Price,y=Food)) + geom_point(aes(color=East)) + 
+  facet_wrap(~East) + geom_smooth(method='lm') + theme(legend.position = 'none')
+p2 = nyc %>% ggplot(aes(x=Price,y=Decor)) + geom_point(aes(color=East)) + 
+  facet_wrap(~East) + geom_smooth(method='lm') + theme(legend.position = 'none')
+p3 = nyc %>% ggplot(aes(x=Price,y=Service)) + geom_point(aes(color=East)) + 
+  facet_wrap(~East) + geom_smooth(method='lm') + theme(legend.position = 'none')
+
+b1 = nyc %>% ggplot() + geom_boxplot(aes(x=East,y=Price,color=East)) + 
+  theme(legend.position = 'none')
+b2 = nyc %>% ggplot() + geom_boxplot(aes(x=East,y=Food,color=East)) + 
+  theme(legend.position = 'none')
+b3 = nyc %>% ggplot() + geom_boxplot(aes(x=East,y=Decor,color=East)) + 
+  theme(legend.position = 'none')
+
+grid.arrange(p1,p2,p3)
+grid.arrange(b1,b2,b3,nrow=1,ncol=3)
+
+```
+
+#### We see in the first series of plots that as price increases, restaurants on the east side see a steeper increase in food quality than restaurants on the west side, indicating a bigger bang for your buck in terms of food quality on the east side. As far as decor and service they seem to increase at similar rates on both the west and east sides. In the second series of plots we also see that the east side has higher median food and decor quality than the west although it does also have a higher median price than the west.
+
+## 3
+
+```{r echo = TRUE}
+
+interfaith = read.table('http://users.stat.ufl.edu/~winner/data/interfaith.dat')
+colnames(interfaith) = c('Socio_Economic','Religion','Gender','Interfaith','Count')
+
+interfaith = interfaith %>% mutate(Gender = ifelse(Gender==1,'Male','Female')) %>% 
+  mutate(Religion = ifelse(Religion==1,'Protestant','Catholic')) %>% 
+  mutate(Socio_Economic = ifelse(Socio_Economic==1,'Low',
+                                 ifelse(Socio_Economic==2,'Middle','High'))) %>% 
+  mutate(Interfaith = ifelse(Interfaith==1,'Yes','No'))
+
+interfaith = interfaith %>% uncount(Count)
+
+for(i in 1:length(colnames(interfaith))){
+  interfaith[,i] = as.factor(interfaith[,i])
+}
+
+levels(interfaith$Socio_Economic) = c("Low","Middle","High")
+
+p1 = interfaith %>% ggplot() + 
+  geom_bar(aes(x=Socio_Economic,fill=Religion),position='dodge') +
+  xlab('Socio Economic Status') + ylab('Count') + ggtitle('1')
+
+p2 = interfaith %>% ggplot() + geom_bar(aes(x=Religion,fill = Gender)) + ylab('Count') + 
+  ggtitle('2')
+
+b1 = interfaith %>% group_by(Socio_Economic,Religion,Interfaith) %>% count() %>% 
+  spread(Interfaith,n) %>% mutate(ratio = Yes/No) %>% ggplot() + 
+  geom_col(aes(x=Socio_Economic,y=ratio, fill = Religion),position='dodge') + 
+  ylab('Yes to No Interfaith Ratio') + xlab('Socio Economic Status') + ggtitle('3')
+
+b2 = interfaith %>% ggplot() + geom_bar(aes(x=Gender,fill=Interfaith), 
+                                        position = 'dodge') + 
+  facet_wrap(~Religion) + ylab('Count') + ggtitle('4')
+
+b3 = interfaith %>% ggplot() + geom_bar(aes(x=Gender,fill=Interfaith),
+                                        position = 'dodge') + 
+  facet_wrap(~Socio_Economic+Religion) + ylab('Count') + ggtitle('5')
+
+grid.arrange(p1,p2)
+
+b1
+b2
+b3
+
+```
+
+#### At first I attempted to compare Catholics and Protestants based on socioeconomic status as you see in plot 1, however, from plot 2 it becomes apparent that in this sample there are just so many more protestants than catholics that this comparison is not possible unless we have real income data which shows that catholics are consistently underpaid and/or underemployed compared to protestants. This sample is also very imbalanced in terms of female to male ratio as seen from plot 2 as well.
+#### Next we look at the Yes/No interfaith ratio for both catholic and protestants broken down by socio-economic status in plot 3. Here we see that catholics of all socio-economic groups have a higher yes to no interfaith relationship ratio than protestants. Furthermore, broken down by gender in plot 4 we see that catholic women and men are both more likely than not to have interfaith relationships compared to protestants, however both catholic and protestant women are more likely to have interfaith relationships than their respective male counterparts.
+#### Finally, in plot 5, breaking down by gender, socio-economic status, and interfaith relationship attitude, we see that catholics are more open to interfaith relationships across all socio-economic categories except high class male catholics who are about as likely to be open as not to interfaith relationships. Another thing of note is that high class protestants are a bit more likely than low and middle class ones to approve of interfaith relationships judging by plot 5.
+
+
